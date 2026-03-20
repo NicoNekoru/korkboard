@@ -79,6 +79,7 @@ export function GraphSearch({
 			: clusters;
 
 		for (const cluster of relevantClusters) {
+			cluster.tags?.forEach((tag) => tagSet.add(tag));
 			for (const block of cluster.blocks) {
 				block.tags?.forEach((tag) => tagSet.add(tag));
 			}
@@ -114,17 +115,37 @@ export function GraphSearch({
 		const output: SearchResult[] = [];
 
 		for (const cluster of relevantClusters) {
-			if (
-				normalizedQuery &&
-				cluster.title.toLowerCase().includes(normalizedQuery)
-			) {
+			let matchedCluster = false;
+			let clusterMatchField = '';
+
+			if (tag && cluster.tags?.includes(tag)) {
+				matchedCluster = true;
+				clusterMatchField = `tag: ${tag}`;
+			} else if (normalizedQuery) {
+				if (cluster.title.toLowerCase().includes(normalizedQuery)) {
+					matchedCluster = true;
+					clusterMatchField = 'title';
+				} else if (
+					cluster.tags?.some((v) => v.toLowerCase().includes(normalizedQuery))
+				) {
+					matchedCluster = true;
+					clusterMatchField = `tag: ${cluster.tags.find((v) => v.toLowerCase().includes(normalizedQuery))}`;
+				} else if (
+					cluster.description?.toLowerCase().includes(normalizedQuery)
+				) {
+					matchedCluster = true;
+					clusterMatchField = 'description';
+				}
+			}
+
+			if (matchedCluster) {
 				output.push({
 					id: cluster.id,
 					type: 'cluster',
 					title: cluster.title,
 					subtitle: cluster.description,
 					clusterId: cluster.id,
-					matchField: 'title',
+					matchField: clusterMatchField,
 				});
 			}
 

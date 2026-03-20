@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge';
 import { useClusters } from '@/context/ClusterContext';
 import { isTauri } from '@/lib/db';
 import type { Cluster } from '@/lib/types';
@@ -14,6 +15,16 @@ import {
 	Type,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+const COLOR_DOT: Record<string, string> = {
+	red: 'bg-red-500',
+	orange: 'bg-orange-500',
+	yellow: 'bg-yellow-500',
+	green: 'bg-green-500',
+	blue: 'bg-blue-500',
+	purple: 'bg-purple-500',
+	pink: 'bg-pink-500',
+};
 
 export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 	const navigate = useNavigate();
@@ -94,10 +105,14 @@ export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 					navigate(`/cluster/${cluster.id}`);
 				}
 			}}
-			className='group cursor-pointer transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative'
+			className='group cursor-pointer transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative flex flex-col h-full bg-card rounded-lg border border-border overflow-hidden'
 		>
+			{cluster.colorLabel ? (
+				<div className={`h-1 w-full ${COLOR_DOT[cluster.colorLabel] || ''}`} />
+			) : null}
+
 			<div
-				className={`mb-3 grid aspect-[4/3] gap-px overflow-hidden rounded-lg border border-border bg-secondary ${previewItems.length > 0 ? 'grid-cols-2 grid-rows-2' : 'grid-cols-1 grid-rows-1'}`}
+				className={`grid aspect-[4/3] gap-px overflow-hidden bg-secondary border-b border-border ${previewItems.length > 0 ? 'grid-cols-2 grid-rows-2' : 'grid-cols-1 grid-rows-1'}`}
 			>
 				{previewItems.length === 0 ? (
 					<div className='flex items-center justify-center bg-muted'>
@@ -121,7 +136,7 @@ export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 									<div className='flex flex-col items-center justify-center p-2 text-center w-full h-full'>
 										{getPreviewIcon(item.type)}
 										{(isLarge || previewItems.length <= 2) && (
-											<span className='mt-2 text-xs text-muted-foreground line-clamp-1 w-full px-2'>
+											<span className='mt-2 text-[10px] text-muted-foreground line-clamp-1 w-full px-2'>
 												{item.title}
 											</span>
 										)}
@@ -141,7 +156,7 @@ export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 					: null}
 			</div>
 
-			<div className='absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+			<div className='absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10'>
 				{isTauri() && (
 					<button
 						type='button'
@@ -154,18 +169,40 @@ export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 				)}
 			</div>
 
-			<h3 className='font-display text-base font-semibold transition-colors group-hover:text-accent'>
-				{cluster.title}
-			</h3>
-			{cluster.description ? (
-				<p className='mt-0.5 line-clamp-2 text-sm text-muted-foreground'>
-					{cluster.description}
-				</p>
-			) : null}
-			<p className='mt-1.5 text-xs text-muted-foreground'>
-				{cluster.blocks.length} blocks
-				{childCount > 0 ? ` · ${childCount} nested` : ''}
-			</p>
+			<div className='p-4 flex-1 flex flex-col'>
+				<h3 className='font-display text-base font-semibold transition-colors group-hover:text-accent'>
+					{cluster.title}
+				</h3>
+				{cluster.description ? (
+					<p className='mt-1 line-clamp-2 text-sm text-muted-foreground'>
+						{cluster.description}
+					</p>
+				) : null}
+
+				{cluster.tags && cluster.tags.length > 0 ? (
+					<div className='mt-3 flex flex-wrap gap-1'>
+						{cluster.tags.slice(0, 3).map((tag) => (
+							<Badge
+								key={tag}
+								variant='secondary'
+								className='px-1.5 py-0 text-[10px]'
+							>
+								{tag}
+							</Badge>
+						))}
+						{cluster.tags.length > 3 ? (
+							<span className='text-[10px] text-muted-foreground'>
+								+{cluster.tags.length - 3}
+							</span>
+						) : null}
+					</div>
+				) : null}
+
+				<div className='mt-auto pt-3 flex items-center justify-between text-xs text-muted-foreground'>
+					<span>{cluster.blocks.length} blocks</span>
+					{childCount > 0 ? <span>{childCount} nested</span> : null}
+				</div>
+			</div>
 		</div>
 	);
 }

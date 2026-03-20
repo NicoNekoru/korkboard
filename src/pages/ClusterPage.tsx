@@ -1,16 +1,24 @@
 import { AddBlockDialog } from '@/components/AddBlockDialog';
 import { BlockCard } from '@/components/BlockCard';
 import { ClusterCard } from '@/components/ClusterCard';
+import { ClusterDetailDialog } from '@/components/ClusterDetailDialog';
 import { ClusterGraph } from '@/components/ClusterGraph';
 import { GraphSearch } from '@/components/GraphSearch';
 import { LinkClusterDialog } from '@/components/LinkClusterDialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useClusters } from '@/context/ClusterContext';
 import type { Block, Cluster, ClusterEdge } from '@/lib/types';
-import { ChevronRight, FolderPlus, Link2, Trash2 } from 'lucide-react';
+import {
+	ChevronRight,
+	FolderPlus,
+	Link2,
+	Settings,
+	Trash2,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -166,6 +174,7 @@ export default function ClusterPage() {
 		edges,
 	} = useClusters();
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [settingsOpen, setSettingsOpen] = useState(false);
 
 	const cluster = getClusterById(id || '');
 	const childClusters = getChildClusters(id || '');
@@ -200,6 +209,16 @@ export default function ClusterPage() {
 		navigate('/');
 	};
 
+	const COLOR_BAR: Record<string, string> = {
+		red: 'border-red-500',
+		orange: 'border-orange-500',
+		yellow: 'border-yellow-500',
+		green: 'border-green-500',
+		blue: 'border-blue-500',
+		purple: 'border-purple-500',
+		pink: 'border-pink-500',
+	};
+
 	return (
 		<div className='min-h-screen'>
 			<section className='container pb-6 pt-6'>
@@ -232,7 +251,9 @@ export default function ClusterPage() {
 					<span className='font-medium text-foreground'>{cluster.title}</span>
 				</div>
 
-				<div className='mb-8 flex items-start justify-between gap-4'>
+				<div
+					className={`mb-8 flex items-start justify-between gap-4 ${cluster.colorLabel ? `border-l-4 pl-4 ${COLOR_BAR[cluster.colorLabel]}` : ''}`}
+				>
 					<div className='min-w-0 flex-1'>
 						<EditableTitle
 							value={cluster.title}
@@ -248,6 +269,21 @@ export default function ClusterPage() {
 								})
 							}
 						/>
+
+						{cluster.tags && cluster.tags.length > 0 ? (
+							<div className='mt-3 flex flex-wrap gap-1'>
+								{cluster.tags.map((tag) => (
+									<Badge
+										key={tag}
+										variant='secondary'
+										className='px-1.5 py-0 text-[10px]'
+									>
+										{tag}
+									</Badge>
+								))}
+							</div>
+						) : null}
+
 						{parentClusters.length > 1 ? (
 							<p className='mt-2 text-xs text-accent'>
 								<Link2 className='mr-1 inline h-3 w-3' />
@@ -256,6 +292,14 @@ export default function ClusterPage() {
 						) : null}
 					</div>
 					<div className='flex flex-wrap gap-2'>
+						<Button
+							variant='outline'
+							size='sm'
+							onClick={() => setSettingsOpen(true)}
+							title='Cluster Settings'
+						>
+							<Settings className='h-4 w-4 text-muted-foreground' />
+						</Button>
 						<Button
 							variant='outline'
 							size='sm'
@@ -335,6 +379,13 @@ export default function ClusterPage() {
 					</div>
 				) : null}
 			</section>
+
+			<ClusterDetailDialog
+				cluster={cluster}
+				open={settingsOpen}
+				onOpenChange={setSettingsOpen}
+				onSave={updateCluster}
+			/>
 
 			<ConfirmDialog
 				open={deleteOpen}

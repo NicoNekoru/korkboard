@@ -80,7 +80,11 @@ export async function getDb(): Promise<Database> {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
-			created_at TEXT NOT NULL
+			tags TEXT,
+			note TEXT,
+			color_label TEXT,
+			created_at TEXT NOT NULL,
+			updated_at TEXT
 		);
 	`);
 
@@ -158,8 +162,12 @@ export async function loadClusters(): Promise<{
 		id: c.id,
 		title: c.title,
 		description: c.description ?? undefined,
+		tags: c.tags ? JSON.parse(c.tags) : [],
+		note: c.note ?? undefined,
+		colorLabel: c.color_label ?? undefined,
 		blocks: blocksByCluster.get(c.id) || [],
 		createdAt: c.created_at,
+		updatedAt: c.updated_at ?? undefined,
 	}));
 
 	const edges: ClusterEdge[] = dbEdges.map((e) => ({
@@ -191,8 +199,17 @@ export async function saveClusterData(
 
 		for (const c of clusters) {
 			await db.execute(
-				'INSERT INTO clusters (id, title, description, created_at) VALUES ($1, $2, $3, $4)',
-				[c.id, c.title, c.description ?? null, c.createdAt],
+				'INSERT INTO clusters (id, title, description, tags, note, color_label, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+				[
+					c.id,
+					c.title,
+					c.description ?? null,
+					JSON.stringify(c.tags ?? []),
+					c.note ?? null,
+					c.colorLabel ?? null,
+					c.createdAt,
+					c.updatedAt ?? null,
+				],
 			);
 
 			for (const b of c.blocks) {

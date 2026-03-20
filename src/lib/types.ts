@@ -20,8 +20,12 @@ export interface Cluster {
 	id: string;
 	title: string;
 	description?: string;
+	tags?: string[];
+	note?: string;
+	colorLabel?: string;
 	blocks: Block[];
 	createdAt: string;
+	updatedAt?: string;
 }
 
 // Edge connecting clusters (many-to-many relationship)
