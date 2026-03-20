@@ -7,19 +7,33 @@ import { useState } from 'react';
 
 export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 	const [open, setOpen] = useState(false);
-	const { clusters, edges, addEdge, removeEdge, getChildClusters } =
-		useClusters();
+	const [linkDirection, setLinkDirection] = useState<'child' | 'parent'>(
+		'child',
+	);
+	const {
+		clusters,
+		edges,
+		addEdge,
+		removeEdge,
+		getChildClusters,
+		getParentClusters,
+	} = useClusters();
 
 	const currentChildIds = new Set(
 		getChildClusters(clusterId).map((cluster) => cluster.id),
+	);
+	const currentParentIds = new Set(
+		getParentClusters(clusterId).map((cluster) => cluster.id),
 	);
 	const availableClusters = clusters.filter(
 		(cluster) => cluster.id !== clusterId,
 	);
 
 	const toggleLink = async (targetId: string) => {
+		const source = linkDirection === 'child' ? clusterId : targetId;
+		const target = linkDirection === 'child' ? targetId : clusterId;
 		const existingEdge = edges.find(
-			(edge) => edge.sourceId === clusterId && edge.targetId === targetId,
+			(edge) => edge.sourceId === source && edge.targetId === target,
 		);
 
 		if (existingEdge) {
@@ -29,8 +43,8 @@ export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 
 		await addEdge({
 			id: crypto.randomUUID(),
-			sourceId: clusterId,
-			targetId,
+			sourceId: source,
+			targetId: target,
 		});
 	};
 
@@ -40,7 +54,10 @@ export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 				variant='outline'
 				size='sm'
 				className='gap-1.5 font-display'
-				onClick={() => setOpen(true)}
+				onClick={() => {
+					setLinkDirection('child');
+					setOpen(true);
+				}}
 			>
 				<Link2 className='h-4 w-4' />
 				Link
@@ -51,11 +68,44 @@ export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 				onOpenChange={setOpen}
 				className='max-w-md'
 				title='Link clusters'
-				description='Select clusters to nest within this one. A cluster can belong to multiple parents.'
+				description={
+					linkDirection === 'child'
+						? 'Select clusters to nest within this one.'
+						: 'Select clusters to nest this one under.'
+				}
 			>
+				<div className='flex bg-secondary p-1 rounded-md mb-4 mt-2'>
+					<button
+						type='button'
+						className={cn(
+							'flex-1 text-sm py-1.5 rounded-sm transition-colors',
+							linkDirection === 'child'
+								? 'bg-background shadow-sm text-foreground'
+								: 'text-muted-foreground hover:text-foreground',
+						)}
+						onClick={() => setLinkDirection('child')}
+					>
+						Add as Child
+					</button>
+					<button
+						type='button'
+						className={cn(
+							'flex-1 text-sm py-1.5 rounded-sm transition-colors',
+							linkDirection === 'parent'
+								? 'bg-background shadow-sm text-foreground'
+								: 'text-muted-foreground hover:text-foreground',
+						)}
+						onClick={() => setLinkDirection('parent')}
+					>
+						Add as Parent
+					</button>
+				</div>
 				<div className='max-h-64 space-y-1 overflow-y-auto'>
 					{availableClusters.map((cluster) => {
-						const isLinked = currentChildIds.has(cluster.id);
+						const isLinked =
+							linkDirection === 'child'
+								? currentChildIds.has(cluster.id)
+								: currentParentIds.has(cluster.id);
 						return (
 							<button
 								key={cluster.id}
@@ -80,6 +130,11 @@ export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 							</button>
 						);
 					})}
+					{availableClusters.length === 0 && (
+						<p className='text-center text-sm text-muted-foreground p-4'>
+							No other clusters available.
+						</p>
+					)}
 				</div>
 			</Modal>
 		</>
