@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
@@ -5,6 +6,16 @@ import { useClusters } from '@/context/ClusterContext';
 import { cn } from '@/lib/utils';
 import { Check, Link2, Search } from 'lucide-react';
 import { useState } from 'react';
+
+const COLOR_DOT: Record<string, string> = {
+	red: 'bg-red-500',
+	orange: 'bg-orange-500',
+	yellow: 'bg-yellow-500',
+	green: 'bg-green-500',
+	blue: 'bg-blue-500',
+	purple: 'bg-purple-500',
+	pink: 'bg-pink-500',
+};
 
 export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 	const [open, setOpen] = useState(false);
@@ -146,21 +157,51 @@ export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 								type='button'
 								onClick={() => void toggleLink(cluster.id)}
 								className={cn(
-									'flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors',
+									'flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors relative overflow-hidden',
 									isLinked
 										? 'border-accent bg-accent/10'
 										: 'border-border hover:border-accent/50',
 								)}
 							>
-								<div>
-									<p className='font-display text-sm font-medium'>
+								{cluster.colorLabel ? (
+									<div
+										className={cn(
+											'absolute left-0 top-0 bottom-0 w-1',
+											COLOR_DOT[cluster.colorLabel],
+										)}
+									/>
+								) : null}
+								<div className='min-w-0 flex-1'>
+									<p className='font-display text-sm font-medium truncate'>
 										{cluster.title}
 									</p>
-									<p className='text-xs text-muted-foreground'>
-										{cluster.blocks.length} blocks
-									</p>
+									<div className='flex items-center gap-2 mt-0.5'>
+										<p className='text-xs text-muted-foreground shrink-0'>
+											{cluster.blocks.length} blocks
+										</p>
+										{cluster.tags && cluster.tags.length > 0 ? (
+											<div className='flex gap-1 overflow-hidden'>
+												{cluster.tags.slice(0, 2).map((tag) => (
+													<Badge
+														key={tag}
+														variant='secondary'
+														className='px-1 py-0 text-[10px] shrink-0'
+													>
+														{tag}
+													</Badge>
+												))}
+												{cluster.tags.length > 2 ? (
+													<span className='text-[10px] text-muted-foreground shrink-0'>
+														+{cluster.tags.length - 2}
+													</span>
+												) : null}
+											</div>
+										) : null}
+									</div>
 								</div>
-								{isLinked ? <Check className='h-4 w-4 text-accent' /> : null}
+								{isLinked ? (
+									<Check className='h-4 w-4 text-accent shrink-0 ml-2' />
+								) : null}
 							</button>
 						);
 					})}
