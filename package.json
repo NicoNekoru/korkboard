@@ -14,11 +14,16 @@
 		"format": "biome format --write .",
 		"preview": "vite preview",
 		"test": "vitest run",
-		"test:watch": "vitest"
+		"test:watch": "vitest",
+		"tauri": "tauri"
 	},
 	"dependencies": {
 		"@supabase/supabase-js": "^2.99.3",
 		"@tauri-apps/api": "^2.10.1",
+		"@tauri-apps/plugin-dialog": "~2",
+		"@tauri-apps/plugin-fs": "~2",
+		"@tauri-apps/plugin-os": "~2",
+		"@tauri-apps/plugin-sql": "~2",
 		"d3-force": "^3.0.0",
 		"lucide-react": "^0.462.0",
 		"react": "^18.3.1",
