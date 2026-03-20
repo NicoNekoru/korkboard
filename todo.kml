@@ -1,0 +1,7 @@
+-[ ] fix preview of cluster
+-[ ] better motions for linking clusters (forwards and back)
+-[ ] clean up the UI
+-[ ] native app (electron/tauri)
+-[ ] blocks and clusters visualized on the same tier (no separation between nested clusters and blocks) 
+-[ ] change parent heading spacing (/the entire visualization by in large)
+-[ ] migrate to clerk auth
