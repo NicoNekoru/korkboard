@@ -3,16 +3,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/context/AuthContext';
 import { useClusters } from '@/context/ClusterContext';
 import type { Cluster } from '@/lib/types';
-import { Layers, Plus } from 'lucide-react';
+import { GitGraph, Layers, LogOut, Plus } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const MAX_TITLE_LENGTH = 100;
 const MAX_DESC_LENGTH = 500;
 
 const Index = () => {
 	const { clusters, addCluster } = useClusters();
+	const { signOut } = useAuth();
+	const navigate = useNavigate();
 	const [newTitle, setNewTitle] = useState('');
 	const [newDesc, setNewDesc] = useState('');
 	const [open, setOpen] = useState(false);
@@ -39,10 +43,21 @@ const Index = () => {
 
 	return (
 		<div className='min-h-screen'>
-			<section className='container pb-4 pt-4'>
+			<section className='container flex items-center justify-between pb-4 pt-6'>
+				<h1 className='font-display text-2xl font-bold'>Korkboard</h1>
+				<div className='flex gap-2'>
+					<Button variant='ghost' size='sm' onClick={() => navigate('/graph')}>
+						<GitGraph className='mr-2 h-4 w-4' />
+						Global Graph
+					</Button>
+					<Button variant='ghost' size='sm' onClick={() => void signOut()}>
+						<LogOut className='mr-2 h-4 w-4' />
+						Sign out
+					</Button>
+				</div>
 			</section>
 
-			<section className='container pb-20'>
+			<section className='container pb-20 pt-4'>
 				<div className='mb-8 flex items-center justify-between'>
 					<h2 className='font-display text-xl font-semibold'>All Clusters</h2>
 					<Button

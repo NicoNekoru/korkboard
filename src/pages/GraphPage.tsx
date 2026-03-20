@@ -13,7 +13,14 @@ import {
 	forceX,
 	forceY,
 } from 'd3-force';
-import { BookOpen, FileText, Image, Link2, Type } from 'lucide-react';
+import {
+	BookOpen,
+	ChevronLeft,
+	FileText,
+	Image,
+	Link2,
+	Type,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -409,69 +416,79 @@ function GraphPage() {
 	};
 
 	return (
-		<div className='h-[calc(100vh-3.5rem)] w-full flex flex-col relative'>
+		<div className='h-screen w-full flex flex-col relative'>
 			{/* Controls */}
-			<div className='px-6 py-4 border-b border-border bg-background flex flex-wrap items-end gap-6'>
-				<div>
-					<h1 className='font-display text-xl font-bold'>Graph View</h1>
-					<p className='text-xs text-muted-foreground mt-0.5'>
-						Double-click to open · Drag nodes · Scroll to zoom
-					</p>
-				</div>
+			<div className='px-6 py-4 border-b border-border bg-background flex flex-col gap-4'>
+				<button
+					type='button'
+					onClick={() => navigate(-1)}
+					className='flex w-fit items-center text-sm text-muted-foreground transition-colors hover:text-foreground'
+				>
+					<ChevronLeft className='mr-1 h-4 w-4' />
+					Back
+				</button>
+				<div className='flex flex-wrap items-end gap-6'>
+					<div>
+						<h1 className='font-display text-xl font-bold'>Graph View</h1>
+						<p className='text-xs text-muted-foreground mt-0.5'>
+							Double-click to open · Drag nodes · Scroll to zoom
+						</p>
+					</div>
 
-				<GraphSearch
-					onHighlight={(id) => {
-						setHighlightedClusterId(id);
-						if (id) setHoveredNode(id);
-						else setHoveredNode(null);
-					}}
-					onNavigate={(id) => navigate(`/cluster/${id}`)}
-					className='w-64'
-				/>
+					<GraphSearch
+						onHighlight={(id) => {
+							setHighlightedClusterId(id);
+							if (id) setHoveredNode(id);
+							else setHoveredNode(null);
+						}}
+						onNavigate={(id) => navigate(`/cluster/${id}`)}
+						className='w-64'
+					/>
 
-				<div className='ml-auto flex flex-wrap items-end gap-6'>
-					<label className='w-36'>
-						<span className='mb-2 block text-xs text-muted-foreground'>
-							Repulsion ({repulsion})
-						</span>
-						<input
-							type='range'
-							min={50}
-							max={800}
-							step={10}
-							value={repulsion}
-							onChange={(event) => setRepulsion(Number(event.target.value))}
-							className='w-full accent-[hsl(var(--accent))]'
-						/>
-					</label>
-					<label className='w-36'>
-						<span className='mb-2 block text-xs text-muted-foreground'>
-							Attraction ({attraction.toFixed(2)})
-						</span>
-						<input
-							type='range'
-							min={0.01}
-							max={1}
-							step={0.01}
-							value={attraction}
-							onChange={(event) => setAttraction(Number(event.target.value))}
-							className='w-full accent-[hsl(var(--accent))]'
-						/>
-					</label>
-					<label className='w-36'>
-						<span className='mb-2 block text-xs text-muted-foreground'>
-							Node Size ({nodeRadius})
-						</span>
-						<input
-							type='range'
-							min={3}
-							max={24}
-							step={1}
-							value={nodeRadius}
-							onChange={(event) => setNodeRadius(Number(event.target.value))}
-							className='w-full accent-[hsl(var(--accent))]'
-						/>
-					</label>
+					<div className='ml-auto flex flex-wrap items-end gap-6'>
+						<label className='w-36'>
+							<span className='mb-2 block text-xs text-muted-foreground'>
+								Repulsion ({repulsion})
+							</span>
+							<input
+								type='range'
+								min={50}
+								max={800}
+								step={10}
+								value={repulsion}
+								onChange={(event) => setRepulsion(Number(event.target.value))}
+								className='w-full accent-[hsl(var(--accent))]'
+							/>
+						</label>
+						<label className='w-36'>
+							<span className='mb-2 block text-xs text-muted-foreground'>
+								Attraction ({attraction.toFixed(2)})
+							</span>
+							<input
+								type='range'
+								min={0.01}
+								max={1}
+								step={0.01}
+								value={attraction}
+								onChange={(event) => setAttraction(Number(event.target.value))}
+								className='w-full accent-[hsl(var(--accent))]'
+							/>
+						</label>
+						<label className='w-36'>
+							<span className='mb-2 block text-xs text-muted-foreground'>
+								Node Size ({nodeRadius})
+							</span>
+							<input
+								type='range'
+								min={3}
+								max={24}
+								step={1}
+								value={nodeRadius}
+								onChange={(event) => setNodeRadius(Number(event.target.value))}
+								className='w-full accent-[hsl(var(--accent))]'
+							/>
+						</label>
+					</div>
 				</div>
 			</div>
 
