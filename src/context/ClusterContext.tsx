@@ -4,8 +4,15 @@ import { useClusterData } from '@/hooks/useClusterData';
 import { useClusterGraph } from '@/hooks/useClusterGraph';
 import { useClusterMutations } from '@/hooks/useClusterMutations';
 import { useEdgeMutations } from '@/hooks/useEdgeMutations';
+import { useSync } from '@/hooks/useSync';
 import type { Block, Cluster, ClusterEdge } from '@/lib/types';
-import { type ReactNode, createContext, useContext } from 'react';
+import {
+	type ReactNode,
+	createContext,
+	useContext,
+	useEffect,
+	useRef,
+} from 'react';
 
 interface ClusterContextType {
 	clusters: Cluster[];
@@ -36,11 +43,29 @@ const ClusterContext = createContext<ClusterContextType | undefined>(undefined);
 
 export function ClusterProvider({ children }: { children: ReactNode }) {
 	const { user } = useAuth();
-	const localMode = true; // Default to local for now
+	const localMode = true;
 	const { clusters, setClusters, edges, setEdges, loading } = useClusterData(
 		user,
 		localMode,
 	);
+
+	const { sync } = useSync(user);
+	const syncTimeout = useRef<number | null>(null);
+
+	// Sync when data changes and user is logged in
+	useEffect(() => {
+		if (!user || loading) return;
+
+		if (syncTimeout.current) window.clearTimeout(syncTimeout.current);
+		syncTimeout.current = window.setTimeout(() => {
+			sync(clusters, edges);
+		}, 5000); // 5s debounce
+
+		return () => {
+			if (syncTimeout.current) window.clearTimeout(syncTimeout.current);
+		};
+	}, [clusters, edges, user, loading, sync]);
+
 	const { addCluster, updateCluster, deleteCluster } = useClusterMutations(
 		user,
 		setClusters,

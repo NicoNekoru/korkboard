@@ -10,8 +10,9 @@
 		"dialog:default",
 		"os:default",
 		"core:path:default",
-		"core:protocol:asset",
 		"core:event:default",
-		"core:window:default"
+		"core:window:default",
+		"fs:allow-applocaldata-read-recursive",
+		"fs:allow-applocaldata-write-recursive"
 	]
 }
