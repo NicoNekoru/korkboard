@@ -15,7 +15,7 @@ const MAX_DESC_LENGTH = 500;
 
 const Index = () => {
 	const { clusters, addCluster } = useClusters();
-	const { signOut } = useAuth();
+	const { signOut, user } = useAuth();
 	const navigate = useNavigate();
 	const [newTitle, setNewTitle] = useState('');
 	const [newDesc, setNewDesc] = useState('');
@@ -50,10 +50,17 @@ const Index = () => {
 						<GitGraph className='mr-2 h-4 w-4' />
 						Global Graph
 					</Button>
-					<Button variant='ghost' size='sm' onClick={() => void signOut()}>
-						<LogOut className='mr-2 h-4 w-4' />
-						Sign out
-					</Button>
+					{user ? (
+						<Button variant='ghost' size='sm' onClick={() => void signOut()}>
+							<LogOut className='mr-2 h-4 w-4' />
+							Sign out
+						</Button>
+					) : (
+						<Button variant='ghost' size='sm' onClick={() => navigate('/auth')}>
+							<LogOut className='mr-2 h-4 w-4' />
+							Sign in
+						</Button>
+					)}
 				</div>
 			</section>
 

@@ -9,22 +9,13 @@ import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 
 function AppRoutes() {
-	const { user, loading } = useAuth();
+	const { loading } = useAuth();
 
 	if (loading) {
 		return (
 			<div className='flex min-h-screen items-center justify-center bg-background'>
 				<p className='text-muted-foreground'>Loading...</p>
 			</div>
-		);
-	}
-
-	if (!user) {
-		return (
-			<Routes>
-				<Route path='/auth' element={<AuthPage />} />
-				<Route path='*' element={<Navigate to='/auth' replace />} />
-			</Routes>
 		);
 	}
 
@@ -36,7 +27,7 @@ function AppRoutes() {
 						<Route path='/' element={<Index />} />
 						<Route path='/cluster/:id' element={<ClusterPage />} />
 						<Route path='/graph' element={<GraphPage />} />
-						<Route path='/auth' element={<Navigate to='/' replace />} />
+						<Route path='/auth' element={<AuthPage />} />
 						<Route path='*' element={<NotFound />} />
 					</Routes>
 				</main>
