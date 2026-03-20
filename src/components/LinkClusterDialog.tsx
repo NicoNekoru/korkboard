@@ -1,8 +1,9 @@
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { useClusters } from '@/context/ClusterContext';
 import { cn } from '@/lib/utils';
-import { Check, Link2 } from 'lucide-react';
+import { Check, Link2, Search } from 'lucide-react';
 import { useState } from 'react';
 
 export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
@@ -10,6 +11,7 @@ export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 	const [linkDirection, setLinkDirection] = useState<'child' | 'parent'>(
 		'child',
 	);
+	const [searchQuery, setSearchQuery] = useState('');
 	const {
 		clusters,
 		edges,
@@ -25,9 +27,19 @@ export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 	const currentParentIds = new Set(
 		getParentClusters(clusterId).map((cluster) => cluster.id),
 	);
+
 	const availableClusters = clusters.filter(
 		(cluster) => cluster.id !== clusterId,
 	);
+
+	const filteredClusters = availableClusters.filter((cluster) => {
+		if (!searchQuery.trim()) return true;
+		const lowerQuery = searchQuery.toLowerCase();
+		return (
+			cluster.title.toLowerCase().includes(lowerQuery) ||
+			cluster.description?.toLowerCase().includes(lowerQuery)
+		);
+	});
 
 	const toggleLink = async (targetId: string) => {
 		const source = linkDirection === 'child' ? clusterId : targetId;
@@ -56,6 +68,7 @@ export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 				className='gap-1.5 font-display'
 				onClick={() => {
 					setLinkDirection('child');
+					setSearchQuery('');
 					setOpen(true);
 				}}
 			>
@@ -100,8 +113,19 @@ export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 						Add as Parent
 					</button>
 				</div>
+
+				<div className='relative mb-4'>
+					<Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+					<Input
+						placeholder='Search clusters...'
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						className='pl-9'
+					/>
+				</div>
+
 				<div className='max-h-64 space-y-1 overflow-y-auto'>
-					{availableClusters.map((cluster) => {
+					{filteredClusters.map((cluster) => {
 						const isLinked =
 							linkDirection === 'child'
 								? currentChildIds.has(cluster.id)
@@ -130,11 +154,15 @@ export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 							</button>
 						);
 					})}
-					{availableClusters.length === 0 && (
+					{availableClusters.length === 0 ? (
 						<p className='text-center text-sm text-muted-foreground p-4'>
 							No other clusters available.
 						</p>
-					)}
+					) : filteredClusters.length === 0 ? (
+						<p className='text-center text-sm text-muted-foreground p-4'>
+							No clusters match your search.
+						</p>
+					) : null}
 				</div>
 			</Modal>
 		</>
