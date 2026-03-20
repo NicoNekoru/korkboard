@@ -1,4 +1,3 @@
--[ ] better motions for linking clusters (forwards and back)
 -[ ] clean up the UI
 -[ ] native app (electron/tauri)
 -[ ] blocks and clusters visualized on the same tier (no separation between nested clusters and blocks) 
