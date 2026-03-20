@@ -1,16 +1,57 @@
 import { useClusters } from '@/context/ClusterContext';
 import type { Cluster } from '@/lib/types';
-import { Layers } from 'lucide-react';
+import {
+	BookOpen,
+	FileText,
+	Folder,
+	Image as ImageIcon,
+	Layers,
+	Link2,
+	Type,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 	const navigate = useNavigate();
 	const { getChildClusters } = useClusters();
 
-	const previewImages = cluster.blocks
-		.filter((block) => block.type === 'image' && block.imageUrl)
-		.slice(0, 3);
-	const childCount = getChildClusters(cluster.id).length;
+	const children = getChildClusters(cluster.id);
+	const childCount = children.length;
+
+	// Gather preview items: first sub-clusters, then blocks
+	const previewItems = [
+		...children.map((c) => ({
+			id: `cluster-${c.id}`,
+			type: 'cluster',
+			title: c.title,
+			imageUrl: null,
+		})),
+		...cluster.blocks.map((b) => ({
+			id: `block-${b.id}`,
+			type: b.type,
+			title: b.title,
+			imageUrl: b.imageUrl,
+		})),
+	].slice(0, 4);
+
+	const getPreviewIcon = (type: string) => {
+		switch (type) {
+			case 'cluster':
+				return <Folder className='h-5 w-5 text-muted-foreground' />;
+			case 'image':
+				return <ImageIcon className='h-5 w-5 text-muted-foreground' />;
+			case 'link':
+				return <Link2 className='h-5 w-5 text-muted-foreground' />;
+			case 'text':
+				return <Type className='h-5 w-5 text-muted-foreground' />;
+			case 'book':
+				return <BookOpen className='h-5 w-5 text-muted-foreground' />;
+			case 'pdf':
+				return <FileText className='h-5 w-5 text-muted-foreground' />;
+			default:
+				return <FileText className='h-5 w-5 text-muted-foreground' />;
+		}
+	};
 
 	return (
 		<div
@@ -25,30 +66,48 @@ export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 			}}
 			className='group cursor-pointer transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
 		>
-			<div className='mb-3 grid aspect-[4/3] grid-cols-2 grid-rows-2 gap-px overflow-hidden rounded-lg border border-border bg-secondary'>
-				{previewImages.map((block, index) => (
-					<div
-						key={block.id}
-						className={`overflow-hidden ${index === 0 ? 'row-span-2' : ''}`}
-					>
-						<img
-							src={block.imageUrl}
-							alt={block.title}
-							className='h-full w-full object-cover transition-transform duration-500 group-hover:scale-105'
-						/>
+			<div
+				className={`mb-3 grid aspect-[4/3] gap-px overflow-hidden rounded-lg border border-border bg-secondary ${previewItems.length > 0 ? 'grid-cols-2 grid-rows-2' : 'grid-cols-1 grid-rows-1'}`}
+			>
+				{previewItems.length === 0 ? (
+					<div className='flex items-center justify-center bg-muted'>
+						<Layers className='h-8 w-8 text-muted-foreground/50' />
 					</div>
-				))}
-				{previewImages.length < 3
-					? ['empty-a', 'empty-b', 'empty-c']
-							.slice(0, 3 - previewImages.length)
-							.map((slot) => (
-								<div
-									key={slot}
-									className='flex items-center justify-center bg-muted'
-								>
-									<Layers className='h-5 w-5 text-muted-foreground' />
-								</div>
-							))
+				) : (
+					previewItems.map((item, index) => {
+						const isLarge = previewItems.length < 4 && index === 0;
+						return (
+							<div
+								key={item.id}
+								className={`flex flex-col items-center justify-center bg-muted overflow-hidden relative ${isLarge ? 'row-span-2' : ''}`}
+							>
+								{item.imageUrl ? (
+									<img
+										src={item.imageUrl}
+										alt={item.title}
+										className='h-full w-full object-cover transition-transform duration-500 group-hover:scale-105'
+									/>
+								) : (
+									<div className='flex flex-col items-center justify-center p-2 text-center w-full h-full'>
+										{getPreviewIcon(item.type)}
+										{(isLarge || previewItems.length <= 2) && (
+											<span className='mt-2 text-xs text-muted-foreground line-clamp-1 w-full px-2'>
+												{item.title}
+											</span>
+										)}
+									</div>
+								)}
+							</div>
+						);
+					})
+				)}
+				{previewItems.length > 0 && previewItems.length < 3
+					? Array.from({ length: 3 - previewItems.length }).map((_, i) => (
+							<div
+								key={`empty-${i}`}
+								className='flex items-center justify-center bg-muted/50'
+							/>
+						))
 					: null}
 			</div>
 
