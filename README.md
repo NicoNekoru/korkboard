@@ -14,6 +14,7 @@ For conscientiousness, consciousness, nostalgia, long term memory, working memor
 - Bun
 - Biome
 - Supabase
+- Tauri
 
 ## Scripts
 
@@ -24,4 +25,6 @@ bun run dev:noauth
 bun run build
 bun run lint
 bun run test
+bun run tauri dev
+bun run tauri build
 ```
