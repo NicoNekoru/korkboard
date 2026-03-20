@@ -35,24 +35,25 @@ interface ClusterContextType {
 const ClusterContext = createContext<ClusterContextType | undefined>(undefined);
 
 export function ClusterProvider({ children }: { children: ReactNode }) {
-	const { user, noAuthMode } = useAuth();
+	const { user } = useAuth();
+	const localMode = true; // Default to local for now
 	const { clusters, setClusters, edges, setEdges, loading } = useClusterData(
 		user,
-		noAuthMode,
+		localMode,
 	);
 	const { addCluster, updateCluster, deleteCluster } = useClusterMutations(
 		user,
 		setClusters,
 		setEdges,
-		noAuthMode,
+		localMode,
 	);
 	const { addBlockToCluster, updateBlock, deleteBlock, moveBlock } =
-		useBlockMutations(user, setClusters, noAuthMode);
+		useBlockMutations(user, setClusters, localMode);
 	const { addEdge, removeEdge } = useEdgeMutations(
 		user,
 		edges,
 		setEdges,
-		noAuthMode,
+		localMode,
 	);
 	const {
 		getChildClusters,

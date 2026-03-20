@@ -1,3 +1,77 @@
+use sha2::{Digest, Sha256};
+use std::fs;
+use std::io::{Read, Write};
+use std::path::PathBuf;
+use tauri::Manager;
+use zip::write::FileOptions;
+
+#[tauri::command]
+async fn export_board(
+    app: tauri::AppHandle,
+    board_json: String,
+    asset_paths: Vec<String>,
+    save_path: String,
+) -> Result<(), String> {
+    let file = fs::File::create(&save_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o755);
+
+    // 1. Write metadata
+    zip.start_file("board.json", options).map_err(|e| e.to_string())?;
+    zip.write_all(board_json.as_bytes()).map_err(|e| e.to_string())?;
+
+    // 2. Write assets
+    for path_str in asset_paths {
+        let path = PathBuf::from(&path_str);
+        if path.exists() {
+            let name = path.file_name().unwrap().to_string_lossy();
+            zip.start_file(format!("assets/{}", name), options).map_err(|e| e.to_string())?;
+            let bytes = fs::read(&path).map_err(|e| e.to_string())?;
+            zip.write_all(&bytes).map_err(|e| e.to_string())?;
+        }
+    }
+
+    zip.finish().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn import_board(app: tauri::AppHandle, archive_path: String) -> Result<String, String> {
+    let file = fs::File::open(&archive_path).map_err(|e| e.to_string())?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
+    
+    let local_data_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    let cache_dir = local_data_dir.join("cache");
+    fs::create_dir_all(&cache_dir).map_err(|e| e.to_string())?;
+
+    let mut board_json = String::new();
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
+        let name = file.name().to_string();
+        
+        if name == "board.json" {
+            file.read_to_string(&mut board_json).map_err(|e| e.to_string())?;
+        } else if name.startsWith("assets/") {
+            let filename = name.strip_prefix("assets/").unwrap();
+            let dest_path = cache_dir.join(filename);
+            let mut dest_file = fs::File::create(&dest_path).map_err(|e| e.to_string())?;
+            let mut bytes = Vec::new();
+            file.read_to_end(&mut bytes).map_err(|e| e.to_string())?;
+            dest_file.write_all(&bytes).map_err(|e| e.to_string())?;
+        }
+    }
+
+    Ok(board_json)
+}
+
+#[tauri::command]
+async fn download_asset(app: tauri::AppHandle, url: String) -> Result<String, String> {
+// ... existing download_asset
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -5,16 +79,6 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
-        .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
-            Ok(())
-        })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .invoke_handler(tauri::generate_handler![download_asset, export_board, import_board])
+// ... rest of run
 }

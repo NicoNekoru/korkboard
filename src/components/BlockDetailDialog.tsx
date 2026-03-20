@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
+import { getAssetUrl } from '@/lib/db';
 import type { Block, Cluster } from '@/lib/types';
 import {
 	ArrowRightLeft,
@@ -296,7 +297,7 @@ export function BlockDetailDialog({
 
 					{block.type === 'image' && block.imageUrl ? (
 						<img
-							src={block.imageUrl}
+							src={getAssetUrl(block.imageUrl)}
 							alt={title}
 							className='max-h-64 w-full rounded-md object-cover'
 						/>
