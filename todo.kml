@@ -1,5 +1,5 @@
--[ ] clean up the UI
--[ ] native app (electron/tauri)
+-[ ] clean up the UI for native
 -[ ] blocks and clusters visualized on the same tier (no separation between nested clusters and blocks) 
 -[ ] change parent heading spacing (/the entire visualization by in large)
 -[ ] migrate to clerk auth
+-[ ] change native window header
