@@ -1,5 +1,4 @@
 import { supabase } from '@/integrations/supabase/client';
-import { NO_AUTH_MODE, NO_AUTH_USER } from '@/lib/noauth-data';
 import type { Session, User } from '@supabase/supabase-js';
 import {
 	type ReactNode,
@@ -16,26 +15,16 @@ interface AuthContextType {
 	signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
 	signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
 	signOut: () => Promise<void>;
-	noAuthMode: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-	const [user, setUser] = useState<User | null>(
-		NO_AUTH_MODE ? NO_AUTH_USER : null,
-	);
+	const [user, setUser] = useState<User | null>(null);
 	const [session, setSession] = useState<Session | null>(null);
-	const [loading, setLoading] = useState(!NO_AUTH_MODE);
+	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		if (NO_AUTH_MODE) {
-			setSession(null);
-			setUser(NO_AUTH_USER);
-			setLoading(false);
-			return;
-		}
-
 		const {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange((_event, session) => {
@@ -54,10 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	const signUp = async (email: string, password: string) => {
-		if (NO_AUTH_MODE) {
-			return { error: null };
-		}
-
 		const { error } = await supabase.auth.signUp({
 			email,
 			password,
@@ -67,10 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	};
 
 	const signIn = async (email: string, password: string) => {
-		if (NO_AUTH_MODE) {
-			return { error: null };
-		}
-
 		const { error } = await supabase.auth.signInWithPassword({
 			email,
 			password,
@@ -79,10 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	};
 
 	const signOut = async () => {
-		if (NO_AUTH_MODE) {
-			return;
-		}
-
 		await supabase.auth.signOut();
 	};
 
@@ -95,7 +72,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				signUp,
 				signIn,
 				signOut,
-				noAuthMode: NO_AUTH_MODE,
 			}}
 		>
 			{children}

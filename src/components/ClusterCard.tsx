@@ -1,7 +1,11 @@
 import { useClusters } from '@/context/ClusterContext';
+import { isTauri } from '@/lib/db';
 import type { Cluster } from '@/lib/types';
+import { invoke } from '@tauri-apps/api/core';
+import { save } from '@tauri-apps/plugin-dialog';
 import {
 	BookOpen,
+	Download,
 	FileText,
 	Folder,
 	Image as ImageIcon,
@@ -17,6 +21,32 @@ export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 
 	const children = getChildClusters(cluster.id);
 	const childCount = children.length;
+
+	const handleExport = async (e: React.MouseEvent) => {
+		e.stopPropagation();
+		if (!isTauri()) return;
+
+		try {
+			const savePath = await save({
+				filters: [{ name: 'Korkboard Archive', extensions: ['kork'] }],
+				defaultPath: `${cluster.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.kork`,
+			});
+
+			if (savePath) {
+				const assetPaths = cluster.blocks
+					.map((b) => b.imageUrl)
+					.filter((path): path is string => !!path && !path.startsWith('http'));
+
+				await invoke('export_board', {
+					boardJson: JSON.stringify(cluster),
+					assetPaths,
+					savePath,
+				});
+			}
+		} catch (error) {
+			console.error('Export failed', error);
+		}
+	};
 
 	// Gather preview items: first sub-clusters, then blocks
 	const previewItems = [
@@ -64,7 +94,7 @@ export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 					navigate(`/cluster/${cluster.id}`);
 				}
 			}}
-			className='group cursor-pointer transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+			className='group cursor-pointer transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 relative'
 		>
 			<div
 				className={`mb-3 grid aspect-[4/3] gap-px overflow-hidden rounded-lg border border-border bg-secondary ${previewItems.length > 0 ? 'grid-cols-2 grid-rows-2' : 'grid-cols-1 grid-rows-1'}`}
@@ -109,6 +139,19 @@ export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 							/>
 						))
 					: null}
+			</div>
+
+			<div className='absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+				{isTauri() && (
+					<button
+						type='button'
+						onClick={handleExport}
+						className='rounded-md bg-background/80 p-1.5 shadow-sm hover:bg-background'
+						title='Export Board'
+					>
+						<Download className='h-4 w-4 text-muted-foreground' />
+					</button>
+				)}
 			</div>
 
 			<h3 className='font-display text-base font-semibold transition-colors group-hover:text-accent'>

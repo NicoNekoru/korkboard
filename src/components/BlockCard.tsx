@@ -1,6 +1,7 @@
 import { BlockDetailDialog } from '@/components/BlockDetailDialog';
 import { Badge } from '@/components/ui/badge';
 import { useClusters } from '@/context/ClusterContext';
+import { getAssetUrl } from '@/lib/db';
 import type { Block } from '@/lib/types';
 import {
 	BookOpen,
@@ -67,7 +68,7 @@ export function BlockCard({
 				{block.type === 'image' && block.imageUrl ? (
 					<div className='relative'>
 						<img
-							src={block.imageUrl}
+							src={getAssetUrl(block.imageUrl)}
 							alt={block.title}
 							className='w-full object-cover'
 							loading='lazy'

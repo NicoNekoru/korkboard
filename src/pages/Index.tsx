@@ -5,8 +5,11 @@ import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
 import { useClusters } from '@/context/ClusterContext';
+import { isTauri } from '@/lib/db';
 import type { Cluster } from '@/lib/types';
-import { GitGraph, Layers, LogOut, Plus } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
+import { GitGraph, Layers, LogOut, Plus, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,7 +22,7 @@ const Index = () => {
 	const navigate = useNavigate();
 	const [newTitle, setNewTitle] = useState('');
 	const [newDesc, setNewDesc] = useState('');
-	const [open, setOpen] = useState(false);
+	const [openModal, setOpenModal] = useState(false);
 
 	const handleCreateCluster = () => {
 		const trimmedTitle = newTitle.trim();
@@ -38,7 +41,28 @@ const Index = () => {
 		void addCluster(cluster);
 		setNewTitle('');
 		setNewDesc('');
-		setOpen(false);
+		setOpenModal(false);
+	};
+
+	const handleImport = async () => {
+		if (!isTauri()) return;
+		try {
+			const selected = await open({
+				filters: [{ name: 'Korkboard Archive', extensions: ['kork'] }],
+			});
+			if (selected && typeof selected === 'string') {
+				const boardJson = await invoke<string>('import_board', {
+					archivePath: selected,
+				});
+				const cluster = JSON.parse(boardJson) as Cluster;
+				// Ensure IDs are unique if importing multiple times
+				cluster.id = crypto.randomUUID();
+				cluster.createdAt = new Date().toISOString();
+				void addCluster(cluster);
+			}
+		} catch (error) {
+			console.error('Import failed', error);
+		}
 	};
 
 	return (
@@ -50,6 +74,12 @@ const Index = () => {
 						<GitGraph className='mr-2 h-4 w-4' />
 						Global Graph
 					</Button>
+					{isTauri() && (
+						<Button variant='ghost' size='sm' onClick={handleImport}>
+							<Upload className='mr-2 h-4 w-4' />
+							Import
+						</Button>
+					)}
 					{user ? (
 						<Button variant='ghost' size='sm' onClick={() => void signOut()}>
 							<LogOut className='mr-2 h-4 w-4' />
@@ -71,7 +101,7 @@ const Index = () => {
 						variant='outline'
 						size='sm'
 						className='gap-1.5 font-display'
-						onClick={() => setOpen(true)}
+						onClick={() => setOpenModal(true)}
 					>
 						<Plus className='h-4 w-4' />
 						New Cluster
@@ -90,7 +120,7 @@ const Index = () => {
 							Create your first cluster to start organizing your ideas, links,
 							and notes.
 						</p>
-						<Button onClick={() => setOpen(true)} className='gap-1.5'>
+						<Button onClick={() => setOpenModal(true)} className='gap-1.5'>
 							<Plus className='h-4 w-4' />
 							Create your first cluster
 						</Button>
@@ -105,8 +135,8 @@ const Index = () => {
 			</section>
 
 			<Modal
-				open={open}
-				onOpenChange={setOpen}
+				open={openModal}
+				onOpenChange={setOpenModal}
 				className='max-w-md'
 				title='Create a cluster'
 			>
