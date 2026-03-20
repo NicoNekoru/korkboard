@@ -1,4 +1,5 @@
 import { ClusterCard } from '@/components/ClusterCard';
+import { GraphSearch } from '@/components/GraphSearch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
@@ -68,7 +69,13 @@ const Index = () => {
 	return (
 		<div className='min-h-screen'>
 			<section className='container flex items-center justify-between pb-4 pt-6'>
-				<h1 className='font-display text-2xl font-bold'>Korkboard</h1>
+				<div className='flex items-center gap-6'>
+					<h1 className='font-display text-2xl font-bold'>Korkboard</h1>
+					<GraphSearch
+						onNavigate={(clusterId) => navigate(`/cluster/${clusterId}`)}
+						className='w-64'
+					/>
+				</div>
 				<div className='flex gap-2'>
 					<Button variant='ghost' size='sm' onClick={() => navigate('/graph')}>
 						<GitGraph className='mr-2 h-4 w-4' />

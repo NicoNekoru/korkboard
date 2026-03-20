@@ -118,20 +118,32 @@ export function GraphSearch({
 			let matchedCluster = false;
 			let clusterMatchField = '';
 
+			const isTagQuery = normalizedQuery.startsWith('#');
+			const effectiveQuery = isTagQuery
+				? normalizedQuery.slice(1)
+				: normalizedQuery;
+
 			if (tag && cluster.tags?.includes(tag)) {
 				matchedCluster = true;
 				clusterMatchField = `tag: ${tag}`;
-			} else if (normalizedQuery) {
-				if (cluster.title.toLowerCase().includes(normalizedQuery)) {
+			} else if (effectiveQuery) {
+				if (
+					!isTagQuery &&
+					cluster.title.toLowerCase().includes(effectiveQuery)
+				) {
 					matchedCluster = true;
 					clusterMatchField = 'title';
 				} else if (
-					cluster.tags?.some((v) => v.toLowerCase().includes(normalizedQuery))
+					cluster.tags?.some((v) => v.toLowerCase().includes(effectiveQuery))
 				) {
 					matchedCluster = true;
-					clusterMatchField = `tag: ${cluster.tags.find((v) => v.toLowerCase().includes(normalizedQuery))}`;
+					const matchingTag = cluster.tags.find((v) =>
+						v.toLowerCase().includes(effectiveQuery),
+					);
+					clusterMatchField = `tag: ${matchingTag}`;
 				} else if (
-					cluster.description?.toLowerCase().includes(normalizedQuery)
+					!isTagQuery &&
+					cluster.description?.toLowerCase().includes(effectiveQuery)
 				) {
 					matchedCluster = true;
 					clusterMatchField = 'description';
@@ -156,23 +168,33 @@ export function GraphSearch({
 				if (tag && block.tags?.includes(tag)) {
 					matched = true;
 					matchField = `tag: ${tag}`;
-				} else if (normalizedQuery) {
-					if (block.title.toLowerCase().includes(normalizedQuery)) {
+				} else if (effectiveQuery) {
+					if (
+						!isTagQuery &&
+						block.title.toLowerCase().includes(effectiveQuery)
+					) {
 						matched = true;
 						matchField = 'title';
 					} else if (
 						block.tags?.some((value) =>
-							value.toLowerCase().includes(normalizedQuery),
+							value.toLowerCase().includes(effectiveQuery),
 						)
 					) {
 						matched = true;
-						matchField = `tag: ${block.tags.find((value) => value.toLowerCase().includes(normalizedQuery))}`;
+						const matchingTag = block.tags.find((value) =>
+							value.toLowerCase().includes(effectiveQuery),
+						);
+						matchField = `tag: ${matchingTag}`;
 					} else if (
-						block.description?.toLowerCase().includes(normalizedQuery)
+						!isTagQuery &&
+						block.description?.toLowerCase().includes(effectiveQuery)
 					) {
 						matched = true;
 						matchField = 'description';
-					} else if (block.author?.toLowerCase().includes(normalizedQuery)) {
+					} else if (
+						!isTagQuery &&
+						block.author?.toLowerCase().includes(effectiveQuery)
+					) {
 						matched = true;
 						matchField = `author: ${block.author}`;
 					}

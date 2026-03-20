@@ -34,10 +34,20 @@ export function LinkClusterDialog({ clusterId }: { clusterId: string }) {
 
 	const filteredClusters = availableClusters.filter((cluster) => {
 		if (!searchQuery.trim()) return true;
-		const lowerQuery = searchQuery.toLowerCase();
+		const lowerQuery = searchQuery.trim().toLowerCase();
+		const isTagQuery = lowerQuery.startsWith('#');
+		const effectiveQuery = isTagQuery ? lowerQuery.slice(1) : lowerQuery;
+
+		if (isTagQuery) {
+			return cluster.tags?.some((tag) =>
+				tag.toLowerCase().includes(effectiveQuery),
+			);
+		}
+
 		return (
 			cluster.title.toLowerCase().includes(lowerQuery) ||
-			cluster.description?.toLowerCase().includes(lowerQuery)
+			cluster.description?.toLowerCase().includes(lowerQuery) ||
+			cluster.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery))
 		);
 	});
 
