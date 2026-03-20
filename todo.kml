@@ -3,3 +3,5 @@
 -[ ] change parent heading spacing (/the entire visualization by in large)
 -[ ] migrate to clerk auth
 -[ ] change native window header
+-[ ] CI/CD and testing
+-[ ] api for user extensibility 
