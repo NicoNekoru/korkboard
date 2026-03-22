@@ -160,6 +160,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: --bundles none
+          uploadWorkflowArtifacts: true
 
       - name: Make executable + bypass Gatekeeper (macOS)
         if: matrix.os == 'macos-latest'
