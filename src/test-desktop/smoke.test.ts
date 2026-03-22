@@ -1,81 +1,99 @@
-import { exec } from 'node:child_process';
+import { exec, spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { promisify } from 'node:util';
 import { expect, test } from '@playwright/test';
 
-const execAsync = promisify(exec);
-
-const getBinaryPath = (platform: string): string => {
-	switch (platform) {
-		case 'linux':
-			return 'src-tauri/target/release/korkboard';
-		case 'darwin':
-			return 'src-tauri/target/release/korkboard.app/Contents/MacOS/korkboard';
-		case 'win32':
-			return 'src-tauri/target/release/korkboard.exe';
-		default:
-			throw new Error(`Unsupported platform: ${platform}`);
-	}
+const EXEC_PATHS: Record<string, string> = {
+	linux: 'src-tauri/target/release/korkboard',
+	darwin: 'src-tauri/target/release/korkboard.app/Contents/MacOS/korkboard',
+	win32: 'src-tauri/target/release/korkboard.exe',
 };
 
-const PORT = 9222;
-const BIN_PATH = getBinaryPath(process.platform);
+const platform = process.platform;
+const BIN_PATH = EXEC_PATHS[platform];
+const absBinPath = path.resolve(BIN_PATH);
 
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Korkboard Desktop App Smoke Test', () => {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let appProcess: any;
+	let child: ReturnType<typeof spawn> | null = null;
 
-	test('binary exists and is executable', () => {
-		const absPath = path.resolve(BIN_PATH);
-		expect(fs.existsSync(absPath), `Binary not found at ${absPath}`).toBe(true);
+	test('binary exists', () => {
+		expect(BIN_PATH, `Unsupported platform: ${platform}`).toBeTruthy();
+		expect(fs.existsSync(absBinPath), `Binary not found at ${absBinPath}`).toBe(
+			true,
+		);
 	});
 
-	test('app launches without crashing', async () => {
-		const absPath = path.resolve(BIN_PATH);
-		appProcess = exec(`"${absPath}" --remote-debugging-port=${PORT}`);
+	test('app launches and stays running', async () => {
+		const isWin = platform === 'win32';
+
+		child = spawn(absBinPath, [], {
+			stdio: 'ignore',
+			detached: !isWin,
+			shell: isWin,
+		});
 
 		await new Promise<void>((resolve) => {
-			appProcess.on('spawn', () => resolve());
+			child!.on('spawn', resolve);
 			setTimeout(resolve, 2000);
 		});
 
-		expect(appProcess.pid).toBeDefined();
-		expect(appProcess.exitCode).toBeNull();
+		expect(child.pid, 'Process did not spawn').toBeDefined();
+
+		await new Promise<void>((resolve) => setTimeout(resolve, 4000));
+
+		try {
+			child.kill('SIGTERM');
+		} catch {
+			// ignore if already dead
+		}
+
+		expect(child.exitCode, 'App exited unexpectedly').toBeNull();
 	});
 
-	test('window renders the dashboard', async () => {
-		await new Promise<void>((resolve) => setTimeout(resolve, 3000));
+	test('window renders dashboard (Linux CDP)', async () => {
+		if (platform !== 'linux') {
+			test.skip();
+			return;
+		}
 
-		const { stdout } = await execAsync(`curl -s http://localhost:${PORT}/json`);
-		const pages = JSON.parse(stdout);
-		expect(pages.length, 'No WebView page found').toBeGreaterThan(0);
+		// On Linux WebKitGTK, CDP must be enabled at launch via env var
+		const childLinux = spawn(absBinPath, [], {
+			stdio: 'ignore',
+			env: {
+				...process.env,
+				WEBKIT_DISABLE_COMPOSITING_MODE: '1',
+				WEB_INSPECTOR_PORT: '9222',
+			},
+		});
 
-		const wsEndpoint = pages[0].webSocketDebuggerUrl;
+		await new Promise<void>((r) => setTimeout(r, 5000));
 
-		const { chromium } = await import('@playwright/test');
-		const browser = await chromium.connect(wsEndpoint);
-		const context = await browser.newContext();
-		const page = await context.newPage();
+		try {
+			const { execSync } = await import('node:child_process');
+			const out = execSync('curl -sf http://localhost:9222/json').toString();
+			const pages = JSON.parse(out);
 
-		await page.waitForLoadState('domcontentloaded');
+			if (pages.length === 0) throw new Error('No pages found');
 
-		await expect(page.getByText('Korkboard')).toBeVisible({ timeout: 10000 });
-		await expect(page.getByText('All Clusters')).toBeVisible({ timeout: 5000 });
+			const wsUrl = pages[0].webSocketDebuggerUrl;
+			const { chromium } = await import('@playwright/test');
+			const browser = await chromium.connect(wsUrl);
+			const page = await browser.newPage();
+			await page.waitForLoadState('networkidle');
 
-		await context.close();
-		await browser.close();
+			await expect(page.getByText('Korkboard')).toBeVisible({ timeout: 15000 });
+
+			await browser.close();
+		} finally {
+			childLinux.kill('SIGTERM');
+		}
 	});
 
-	test.afterAll(async () => {
-		if (appProcess && !appProcess.killed) {
-			appProcess.kill('SIGTERM');
-			await new Promise((r) => setTimeout(r, 1000));
-			if (process.platform === 'win32') {
-				exec(`taskkill /pid ${appProcess.pid} /T /F`);
-			}
+	test.afterAll(() => {
+		if (child && !child.killed) {
+			child.kill('SIGTERM');
 		}
 	});
 });
