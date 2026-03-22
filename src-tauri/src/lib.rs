@@ -16,9 +16,8 @@ async fn download_asset(app: tauri::AppHandle, url: String) -> Result<String, St
     let hash = hex::encode(hasher.finalize());
 
     let extension = url
-        .split('.')
-        .last()
-        .unwrap_or("bin")
+        .rsplit_once('.')
+        .map_or("bin", |(_, e)| e)
         .split('?')
         .next()
         .unwrap_or("bin");

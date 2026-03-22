@@ -37,7 +37,7 @@ declare global {
 	}
 }
 import { sampleClusters, sampleEdges } from './sample-data';
-import type { Block, Cluster, ClusterEdge } from './types';
+import type { Block, BlockType, Cluster, ClusterEdge } from './types';
 
 export const isTauri = () => {
 	// @ts-ignore
@@ -114,6 +114,40 @@ function saveWebState(state: WebState) {
 	window.localStorage.setItem(WEB_STORAGE_KEY, JSON.stringify(state));
 }
 
+interface ClusterRow {
+	id: string;
+	title: string;
+	description: string | null;
+	tags: string | null;
+	note: string | null;
+	color_label: string | null;
+	created_at: string;
+	updated_at: string | null;
+}
+
+interface BlockRow {
+	id: string;
+	cluster_id: string;
+	type: string;
+	title: string;
+	description: string | null;
+	url: string | null;
+	image_url: string | null;
+	author: string | null;
+	content: string | null;
+	tags: string | null;
+	note: string | null;
+	color_label: string | null;
+	created_at: string;
+	updated_at: string | null;
+}
+
+interface EdgeRow {
+	id: string;
+	source_id: string;
+	target_id: string;
+}
+
 export async function getDb(): Promise<SqliteDatabase> {
 	if (dbInstance) return dbInstance;
 	if (!isTauri()) throw new Error('SQLite not available on web');
@@ -174,20 +208,20 @@ export async function loadClusters(): Promise<{
 
 	const db = await getDb();
 
-	const dbClusters = await db.select<any[]>(
+	const dbClusters = await db.select<ClusterRow[]>(
 		'SELECT * FROM clusters ORDER BY created_at DESC',
 	);
-	const dbBlocks = await db.select<any[]>(
+	const dbBlocks = await db.select<BlockRow[]>(
 		'SELECT * FROM blocks ORDER BY created_at DESC',
 	);
-	const dbEdges = await db.select<any[]>('SELECT * FROM cluster_edges');
+	const dbEdges = await db.select<EdgeRow[]>('SELECT * FROM cluster_edges');
 
 	const blocksByCluster = new Map<string, Block[]>();
 	for (const b of dbBlocks) {
 		const blocks = blocksByCluster.get(b.cluster_id) || [];
 		blocks.push({
 			id: b.id,
-			type: b.type,
+			type: b.type as BlockType,
 			title: b.title,
 			description: b.description ?? undefined,
 			url: b.url ?? undefined,
