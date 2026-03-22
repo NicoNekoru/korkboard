@@ -6,10 +6,8 @@ import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
 import { useClusters } from '@/context/ClusterContext';
-import { isTauri } from '@/lib/db';
+import { webImportCluster } from '@/lib/db';
 import type { Cluster } from '@/lib/types';
-import { invoke } from '@tauri-apps/api/core';
-import { open } from '@tauri-apps/plugin-dialog';
 import { GitGraph, Layers, LogOut, Plus, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -46,21 +44,9 @@ const Index = () => {
 	};
 
 	const handleImport = async () => {
-		if (!isTauri()) return;
 		try {
-			const selected = await open({
-				filters: [{ name: 'Korkboard Archive', extensions: ['kork'] }],
-			});
-			if (selected && typeof selected === 'string') {
-				const boardJson = await invoke<string>('import_board', {
-					archivePath: selected,
-				});
-				const cluster = JSON.parse(boardJson) as Cluster;
-				// Ensure IDs are unique if importing multiple times
-				cluster.id = crypto.randomUUID();
-				cluster.createdAt = new Date().toISOString();
-				void addCluster(cluster);
-			}
+			const cluster = await webImportCluster();
+			if (cluster) void addCluster(cluster);
 		} catch (error) {
 			console.error('Import failed', error);
 		}
@@ -81,12 +67,10 @@ const Index = () => {
 						<GitGraph className='mr-2 h-4 w-4' />
 						Global Graph
 					</Button>
-					{isTauri() && (
-						<Button variant='ghost' size='sm' onClick={handleImport}>
-							<Upload className='mr-2 h-4 w-4' />
-							Import
-						</Button>
-					)}
+					<Button variant='ghost' size='sm' onClick={handleImport}>
+						<Upload className='mr-2 h-4 w-4' />
+						Import
+					</Button>
 					{user ? (
 						<Button variant='ghost' size='sm' onClick={() => void signOut()}>
 							<LogOut className='mr-2 h-4 w-4' />

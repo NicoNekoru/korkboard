@@ -1,34 +1,77 @@
-import { invoke } from '@tauri-apps/api/core';
-import { convertFileSrc } from '@tauri-apps/api/core';
-import Database from '@tauri-apps/plugin-sql';
+import JSZip from 'jszip';
+
+interface FileSystemWritableFileStream extends WritableStream {
+	write(data: BufferSource | Blob | string): Promise<void>;
+	close(): Promise<void>;
+}
+
+interface FileSystemFileHandle {
+	getFile(): Promise<File>;
+	createWritable(): Promise<FileSystemWritableFileStream>;
+}
+
+interface SaveFilePickerOptions {
+	suggestedName?: string;
+	types?: Array<{
+		description?: string;
+		accept: Record<string, string[]>;
+	}>;
+}
+
+interface OpenFilePickerOptions {
+	types?: Array<{
+		description?: string;
+		accept: Record<string, string[]>;
+	}>;
+	multiple?: boolean;
+}
+
+declare global {
+	interface Window {
+		showSaveFilePicker(
+			options?: SaveFilePickerOptions,
+		): Promise<FileSystemFileHandle>;
+		showOpenFilePicker(
+			options?: OpenFilePickerOptions,
+		): Promise<FileSystemFileHandle[]>;
+	}
+}
 import { sampleClusters, sampleEdges } from './sample-data';
 import type { Block, Cluster, ClusterEdge } from './types';
 
-// Helper to determine if we are running in Tauri
 export const isTauri = () => {
 	// @ts-ignore
 	return window.__TAURI_INTERNALS__ !== undefined;
 };
 
-export const getAssetUrl = (localPath: string) => {
+let _convertFileSrc: ((path: string) => string) | null = null;
+void (async () => {
+	if (isTauri()) {
+		const mod = await import('@tauri-apps/api/core');
+		_convertFileSrc = mod.convertFileSrc;
+	}
+})();
+
+export const getAssetUrl = (localPath: string): string => {
 	if (!localPath || typeof localPath !== 'string') return '';
 	if (
 		localPath.startsWith('http') ||
 		localPath.startsWith('blob') ||
-		localPath.startsWith('data:')
+		localPath.startsWith('data:') ||
+		localPath.startsWith('asset://')
 	) {
 		return localPath;
 	}
-	try {
-		return convertFileSrc(localPath);
-	} catch (e) {
-		return localPath;
-	}
+	// On first call the async init may not be done yet; return as-is.
+	// After that, _convertFileSrc is set and we use it.
+	if (_convertFileSrc) return _convertFileSrc(localPath);
+	return localPath;
 };
 
 export async function cacheAsset(url: string): Promise<string> {
 	if (!isTauri() || !url || !url.startsWith('http')) return url;
 	try {
+		const { invoke } = await import('@tauri-apps/api/core');
 		const localPath = await invoke<string>('download_asset', { url });
 		return localPath;
 	} catch (e) {
@@ -38,9 +81,12 @@ export async function cacheAsset(url: string): Promise<string> {
 }
 
 // Singleton DB instance
-let dbInstance: Database | null = null;
+type SqliteDatabase = {
+	execute(sql: string, args?: unknown[]): Promise<unknown>;
+	select<T>(sql: string, args?: unknown[]): Promise<T>;
+};
+let dbInstance: SqliteDatabase | null = null;
 
-// IndexedDB / LocalStorage fallback for Web mode
 const WEB_STORAGE_KEY = 'korkboard:web-state';
 
 interface WebState {
@@ -68,13 +114,12 @@ function saveWebState(state: WebState) {
 	window.localStorage.setItem(WEB_STORAGE_KEY, JSON.stringify(state));
 }
 
-// Ensure DB is loaded
-export async function getDb(): Promise<Database> {
+export async function getDb(): Promise<SqliteDatabase> {
 	if (dbInstance) return dbInstance;
-
+	if (!isTauri()) throw new Error('SQLite not available on web');
+	const Database = (await import('@tauri-apps/plugin-sql')).default;
 	dbInstance = await Database.load('sqlite:korkboard.db');
 
-	// Initialize tables
 	await dbInstance.execute(`
 		CREATE TABLE IF NOT EXISTS clusters (
 			id TEXT PRIMARY KEY,
@@ -190,7 +235,6 @@ export async function saveClusterData(
 
 	const db = await getDb();
 
-	// Full sync for simplicity (for now)
 	await db.execute('BEGIN TRANSACTION');
 	try {
 		await db.execute('DELETE FROM cluster_edges');
@@ -247,4 +291,100 @@ export async function saveClusterData(
 		console.error('Failed to save cluster data', error);
 		throw error;
 	}
+}
+
+// --- Web Import/Export (File System Access API + JSZip) ---
+
+export async function webExportCluster(cluster: Cluster): Promise<void> {
+	const zip = new JSZip();
+
+	const clusterJson = JSON.stringify(cluster);
+	zip.file('board.json', clusterJson);
+
+	const blob = await zip.generateAsync({
+		type: 'blob',
+		compression: 'DEFLATE',
+		compressionOptions: { level: 6 },
+	});
+
+	const filename = `${cluster.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.kork`;
+
+	if ('showSaveFilePicker' in window) {
+		try {
+			const handle = await window.showSaveFilePicker({
+				suggestedName: filename,
+				types: [
+					{
+						description: 'Korkboard Archive',
+						accept: { 'application/zip': ['.kork'] },
+					},
+				],
+			});
+			const writable = await handle.createWritable();
+			await writable.write(blob);
+			await writable.close();
+		} catch (e) {
+			if ((e as Error).name === 'AbortError') return;
+			throw e;
+		}
+	} else {
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = filename;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	}
+}
+
+export async function webImportCluster(): Promise<Cluster | null> {
+	let fileHandle: FileSystemFileHandle | null = null;
+	let file: File;
+
+	if ('showOpenFilePicker' in window) {
+		try {
+			const [handle] = await window.showOpenFilePicker({
+				types: [
+					{
+						description: 'Korkboard Archive',
+						accept: { 'application/zip': ['.kork'] },
+					},
+				],
+				multiple: false,
+			});
+			fileHandle = handle;
+			file = await handle.getFile();
+		} catch (e) {
+			if ((e as Error).name === 'AbortError') return null;
+			throw e;
+		}
+	} else {
+		const input = document.createElement('input');
+		input.type = 'file';
+		input.accept = '.kork';
+
+		file = await new Promise<File>((resolve, reject) => {
+			input.onchange = () => {
+				const f = input.files?.[0];
+				if (f) resolve(f);
+				else reject(new Error('No file selected'));
+			};
+			input.oncancel = () => reject(new Error('Cancelled'));
+			document.body.appendChild(input);
+			input.click();
+			document.body.removeChild(input);
+		});
+	}
+
+	const zip = await JSZip.loadAsync(file);
+	const boardJson = await zip.file('board.json')?.async('string');
+	if (!boardJson) throw new Error('Invalid .kork archive: missing board.json');
+
+	const cluster = JSON.parse(boardJson) as Cluster;
+	cluster.id = crypto.randomUUID();
+	cluster.createdAt = new Date().toISOString();
+
+	return cluster;
 }

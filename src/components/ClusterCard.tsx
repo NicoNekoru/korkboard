@@ -1,9 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { useClusters } from '@/context/ClusterContext';
-import { isTauri } from '@/lib/db';
+import { isTauri, webExportCluster } from '@/lib/db';
 import type { Cluster } from '@/lib/types';
-import { invoke } from '@tauri-apps/api/core';
-import { save } from '@tauri-apps/plugin-dialog';
 import {
 	BookOpen,
 	Download,
@@ -35,24 +33,29 @@ export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 
 	const handleExport = async (e: React.MouseEvent) => {
 		e.stopPropagation();
-		if (!isTauri()) return;
 
 		try {
-			const savePath = await save({
-				filters: [{ name: 'Korkboard Archive', extensions: ['kork'] }],
-				defaultPath: `${cluster.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.kork`,
-			});
-
-			if (savePath) {
-				const assetPaths = cluster.blocks
-					.map((b) => b.imageUrl)
-					.filter((path): path is string => !!path && !path.startsWith('http'));
-
-				await invoke('export_board', {
-					boardJson: JSON.stringify(cluster),
-					assetPaths,
-					savePath,
+			if (isTauri()) {
+				const { invoke } = await import('@tauri-apps/api/core');
+				const { save } = await import('@tauri-apps/plugin-dialog');
+				const savePath = await save({
+					filters: [{ name: 'Korkboard Archive', extensions: ['kork'] }],
+					defaultPath: `${cluster.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.kork`,
 				});
+				if (savePath) {
+					const assetPaths = cluster.blocks
+						.map((b) => b.imageUrl)
+						.filter(
+							(path): path is string => !!path && !path.startsWith('http'),
+						);
+					await invoke('export_board', {
+						boardJson: JSON.stringify(cluster),
+						assetPaths,
+						savePath,
+					});
+				}
+			} else {
+				await webExportCluster(cluster);
 			}
 		} catch (error) {
 			console.error('Export failed', error);
@@ -157,16 +160,14 @@ export function ClusterCard({ cluster }: { cluster: Cluster; index: number }) {
 			</div>
 
 			<div className='absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10'>
-				{isTauri() && (
-					<button
-						type='button'
-						onClick={handleExport}
-						className='rounded-md bg-background/80 p-1.5 shadow-sm hover:bg-background'
-						title='Export Board'
-					>
-						<Download className='h-4 w-4 text-muted-foreground' />
-					</button>
-				)}
+				<button
+					type='button'
+					onClick={handleExport}
+					className='rounded-md bg-background/80 p-1.5 shadow-sm hover:bg-background'
+					title='Export Board'
+				>
+					<Download className='h-4 w-4 text-muted-foreground' />
+				</button>
 			</div>
 
 			<div className='p-4 flex-1 flex flex-col'>
